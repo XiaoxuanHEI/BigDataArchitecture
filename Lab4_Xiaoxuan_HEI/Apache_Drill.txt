@@ -1,0 +1,69 @@
+Terminal 1
+cd /Users/cherilyn/Downloads/apache-drill-1.16.0 
+bin/drill-embedded
+show databases;
+USE mongo.test;
+SHOW TABLES;
+
+
+SELECT e.fields.code_postal AS zip_code, count(*) AS num
+FROM egalite e
+WHERE e.fields.commune = 'Toulouse'
+GROUP BY zip_code
+ORDER BY num DESC;
+
+CREATE TABLE dfs.tmp.query AS 
+(SELECT e.fields.code_postal AS zip_code, count(*) AS num
+FROM egalite e
+WHERE e.fields.commune = 'Toulouse'
+GROUP BY zip_code
+ORDER BY num DESC
+);
+
+SELECT* FROM dfs.tmp.query;
+
+ 
+Terminal 2
+cd /Users/cherilyn/Downloads/lab4_drill/
+mongod --dbpath ./server_1 --port 27018
+
+Terminal 3
+cd /Users/cherilyn/Downloads/lab4_drill/
+mongoimport -c egalite --port 27018 ./structures-egalite-femmeshommes.json --jsonArray
+
+Terminal 4
+start: pg_ctl -D /usr/local/var/postgres -l /usr/local/var/postgres/server.log start
+stop: pg_ctl -D /usr/local/var/postgres stop -s -m fast
+
+create user test superuser password '961011';
+createdb data -O root -E UTF8 -e
+psql -U root -d data -h 127.0.0.1
+
+CREATE TABLE crime(INCIDENT_NUMBER text, OFFENSE_CODE int, OFFENSE_CODE_GROUP text, OFFENSE_DESCRIPTION text, DISTRICT text, REPORTING_AREA text, SHOOTING text, OCCURRED_ON_DATE text, YEAR int, MONTH int, DAY_OF_WEEK text, HOUR int, UCR_PART text, STREET text, Lat double precision, Long double precision, Location text);
+
+copy crime from '/Users/cherilyn/Downloads/lab4_drill/boston-crime-incident-reports-10k.csv' CSV HEADER;
+
+SELECT day_of_week, count(DISTINCT incident_number) as num 
+FROM crime 
+GROUP BY day_of_week;
+
+SELECT *
+FROM dfs.`/Users/cherilyn/Downloads/lab4_drill/boston-offense-codes-lookup.csv` as l
+LIMIT 10;
+
+SELECT DISTINCT c.street
+FROM crime AS c, dfs.`/Users/cherilyn/Downloads/lab4_drill/boston-offense-codes-lookup.csv` AS l
+WHERE c.day_of_week = 'Monday'
+AND c.offense_code = CAST(l.col_CODE AS int)
+AND l.NAME LIKE '%FIRE%';
+
+SELECT DISTINCT c.street,
+CAST(columns[0] AS int) as `CODE`,
+CAST(columns[1] AS varchar) as `NAME`
+FROM  crime AS c, dfs.`/Users/cherilyn/Downloads/lab4_drill/boston-offense-codes-lookup.csv` as l
+WHERE c.day_of_week = 'Monday'
+AND c.offense_code = CAST(l.CODE AS int)
+AND l.NAME LIKE '%FIRE%';
+
+
+/Users/cherilyn/Downloads/lab4_drill/boston-offense-codes-lookup.csv

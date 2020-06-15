@@ -1,0 +1,63 @@
+./bin/neo4j start
+./bin/cypher-shell
+LOAD CSV FROM "file:///boston-crime-incident-reports-10k.csv" AS row RETURN row
+LOAD CSV FROM "file:///boston-offense-codes-lookup.csv" AS row RETURN row
+
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///boston-crime-incident-reports-10k.csv" AS row
+CREATE(:Report {iNumber: row.INCIDENT_NUMBER, oCode: row.OFFENSE_CODE, oCodeGroup: row.OFFENSE_CODE_GROUP, oDescrip: row.OFFENSE_DESCRIPTION, district: row.DISTRICT, reportArea: row.REPORTING_AREA, shoot: row.SHOOTING, date: row.OCCURRED_ON_DATE, year: row.YEAR, month: row.MONTH, day: row.DAY_OF_WEEK, hour: row.HOUR, ucr: row.UCR_PART, street: row.STREET, lat: row.Lat, long: row.Long, location: row.Location})
+
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///boston-offense-codes-lookup.csv" AS row
+CREATE(:Code {code: row.CODE, name: row.NAME})
+
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///boston-crime-incident-reports-10k.csv" AS row
+MATCH (r:Report {iNumber: row.INCIDENT_NUMBER})
+MATCH (c:Code {code: row.OFFENSE_CODE})
+MERGE (r)-[:OFFEND]->(c)
+
+MATCH (r:Report)
+WHERE r.oCodeGroup = 'Drug Violation'
+RETURN COUNT(DISTINCT r.iNumber)
+
+MATCH (r:Report {oCodeGroup: "Drug Violation"})
+RETURN COUNT(DISTINCT r.iNumber)
+
+MATCH (r:Report {oCodeGroup: "Investigate Person"})
+RETURN DISTINCT r.oDescrip
+
+MATCH (r:Report {oCodeGroup: "Investigate Person"})
+MATCH (c:Code)
+WHERE c.code = r.oCode
+RETURN DISTINCT c.name
+
+MATCH (r:Report)--(c:Code)
+WHERE r.oCodeGroup = "Investigate Person"
+RETURN DISTINCT c.name
+
+PROFILE MATCH (r:Report {oCodeGroup: "Drug Violation"})
+RETURN COUNT(DISTINCT r.iNumber)
+
+EXPLAIN MATCH (r:Report {oCodeGroup: "Drug Violation"})
+RETURN COUNT(DISTINCT r.iNumber)
+
+PROFILE MATCH (r:Report)--(c:Code)
+WHERE r.oCodeGroup = "Investigate Person"
+RETURN DISTINCT c.name
+
+EXPLAIN MATCH (r:Report)-[:OFFEND]-(c:Code)
+WHERE r.oCodeGroup = "Investigate Person"
+RETURN DISTINCT c.name
+
+CREATE INDEX ON :Report(oCodeGroup)
+
+MATCH (r:Report)--(c:Code)
+WHERE r.ucr = "Part One" AND r.day = "Sunday"
+RETURN r,c
+ORDER BY r.date
+
+MATCH (r:Report)--(c:Code)
+WHERE r.ucr = "Part One" AND r.day = "Sunday"
+RETURN r.iNumber, r.date, c.name
+ORDER BY r.date

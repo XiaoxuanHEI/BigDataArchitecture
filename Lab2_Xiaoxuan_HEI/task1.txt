@@ -1,0 +1,22 @@
+db.movies.find({"person-name":"Teixeira, Anabela"})
+
+db.movies.find({"person-name":"Spielberg, Steven"},{"info.birthnotes":1})
+
+db.movies.count({"info.birthnotes":/^Lisbon/})
+
+db.movies.find({$and:[{"info.height":/cm/},{"info.height":{$gt:"170 cm"}}]},{"person-name":1})
+
+db.movies.find({"info.trivia":/Opera/},{"person-name":1})
+
+db.cities.find(
+	{
+		"name":
+			{
+				$in: db.movies.distinct("info.birthnotes")}},
+	{	"_id":0,
+		"name":1,
+		"population":1,
+		"location.latitude":1,
+		"location.longitude":1		
+	}
+)
